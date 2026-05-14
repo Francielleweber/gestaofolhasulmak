@@ -1092,6 +1092,7 @@ function renderDashboard(c) {
 //  CONFIGURAÇÕES
 // ═══════════════════════════════════════════════════════
 function renderConfig(c) {
+  const agora = new Date().toLocaleDateString('pt-BR');
   c.innerHTML = `
     <div class="card" style="max-width:600px;">
       <div class="card-header"><h3>🔌 Status da Conexão</h3></div>
@@ -1108,20 +1109,98 @@ function renderConfig(c) {
     </div>
 
     <div class="card" style="max-width:600px;">
-      <div class="card-header"><h3>📊 Cache Local</h3></div>
+      <div class="card-header"><h3>💾 Backup dos Dados</h3></div>
       <div class="card-body">
-        <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">
-          O sistema mantém uma cópia local dos dados para melhor desempenho.
+        <p style="font-size:13px;color:var(--text2);margin-bottom:6px;">
+          Exporte todos os dados do sistema em um arquivo JSON para guardar no seu computador.
+          Recomendamos fazer backup <b>semanalmente</b>.
         </p>
         <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">
           <b>Funcionários:</b> ${cache.funcionarios.length} &nbsp;|&nbsp;
           <b>Lançamentos:</b> ${cache.lancamentos.length} &nbsp;|&nbsp;
-          <b>Férias:</b> ${cache.ferias.length}
+          <b>Férias:</b> ${cache.ferias.length} &nbsp;|&nbsp;
+          <b>13º:</b> ${cache.decimoTerceiro.length}
         </p>
-
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn primary" onclick="exportarBackup()">⬇️ Exportar backup</button>
+          <button class="btn" onclick="document.getElementById('import-backup').click()">⬆️ Importar backup</button>
+        </div>
+        <input type="file" id="import-backup" accept=".json" style="display:none" onchange="importarBackup(event)">
+        <div id="backup-result" style="margin-top:10px;"></div>
+        <div style="margin-top:12px;padding:10px 12px;background:var(--amber-bg);border-radius:var(--radius-sm);font-size:12px;color:var(--amber);">
+          ⚠️ O backup gratuito do Railway não está disponível no plano atual. Faça backups manuais regularmente usando o botão acima.
+        </div>
       </div>
     </div>
   `;
+}
+
+function exportarBackup() {
+  // Sincroniza antes de exportar para garantir dados atualizados
+  const dados = {
+    versao: '2.0',
+    exportadoEm: new Date().toISOString(),
+    funcionarios:    cache.funcionarios,
+    lancamentos:     cache.lancamentos.map(l => { const c2={...l}; return c2; }),
+    ferias:          cache.ferias,
+    decimoTerceiro:  cache.decimoTerceiro,
+  };
+  const json    = JSON.stringify(dados, null, 2);
+  const blob    = new Blob([json], { type: 'application/json' });
+  const url     = URL.createObjectURL(blob);
+  const a       = document.createElement('a');
+  const data    = new Date().toISOString().slice(0,10);
+  a.href        = url;
+  a.download    = 'backup_sulmak_' + data + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ Backup exportado com sucesso!', 'ok');
+}
+
+async function importarBackup(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const el = document.getElementById('backup-result');
+  try {
+    const text = await file.text();
+    const dados = JSON.parse(text);
+    if (!dados.funcionarios || !dados.lancamentos) {
+      if (el) el.innerHTML = '<span style="color:var(--red);font-size:13px;">✗ Arquivo inválido. Selecione um backup gerado por este sistema.</span>';
+      return;
+    }
+    if (!confirm(`Importar backup de ${dados.exportadoEm ? new Date(dados.exportadoEm).toLocaleDateString('pt-BR') : 'data desconhecida'}?\n\nIsso vai SUBSTITUIR todos os dados atuais no banco.\nEsta ação não pode ser desfeita.`)) {
+      event.target.value = '';
+      return;
+    }
+    if (el) el.innerHTML = '<span style="color:var(--amber);font-size:13px;">⏳ Importando dados, aguarde...</span>';
+
+    // Importa funcionários
+    let erros = 0;
+    for (const f of (dados.funcionarios || [])) {
+      try { await apiCall('POST', '/funcionarios', f); } catch(e) { erros++; }
+    }
+    for (const l of (dados.lancamentos || [])) {
+      try { await apiCall('POST', '/lancamentos', l); } catch(e) { erros++; }
+    }
+    for (const fe of (dados.ferias || [])) {
+      try { await apiCall('POST', '/ferias', fe); } catch(e) { erros++; }
+    }
+    for (const d of (dados.decimoTerceiro || [])) {
+      try { await apiCall('POST', '/decimoTerceiro', d); } catch(e) { erros++; }
+    }
+
+    await syncAll();
+    event.target.value = '';
+    const msg = erros > 0
+      ? `⚠️ Importação concluída com ${erros} erro(s). Verifique os dados.`
+      : '✓ Backup importado com sucesso!';
+    if (el) el.innerHTML = '<span style="color:var(--green);font-size:13px;font-weight:500;">' + msg + '</span>';
+    showToast(msg, erros > 0 ? 'err' : 'ok');
+  } catch(e) {
+    if (el) el.innerHTML = '<span style="color:var(--red);font-size:13px;">✗ Erro ao importar: ' + e.message + '</span>';
+    showToast('Erro ao importar backup: ' + e.message, 'err');
+    event.target.value = '';
+  }
 }
 
 async function testarConexao() {
