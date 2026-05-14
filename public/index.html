@@ -817,12 +817,36 @@ async function syncAll() {
 
     cache.ferias = (r.ferias || []).map(fe => ({
       ...fe,
+      periodoAquisitivoIni: toInputDate(fe.periodoAquisitivoIni),
+      periodoAquisitivoFim: toInputDate(fe.periodoAquisitivoFim),
       periodoInicio:  toInputDate(fe.periodoInicio),
       periodoFim:     toInputDate(fe.periodoFim),
+      dataPagamento:  toInputDate(fe.dataPagamento),
       dataLancamento: toInputDate(fe.dataLancamento),
       comAbono:   fe.comAbono  == 1 || fe.comAbono  === true,
       comDobro:   fe.comDobro  == 1 || fe.comDobro  === true,
       com1Parc13: fe.com1Parc13== 1 || fe.com1Parc13=== true,
+      descontoINSS:   Number(fe.descontoINSS || 0),
+      descontoIR:     Number(fe.descontoIR || 0),
+      outrosDescontos: Number(fe.outrosDescontos || 0),
+      propDescontoINSS: Number(fe.propDescontoINSS || 0),
+      propDescontoIR:   Number(fe.propDescontoIR || 0),
+    }));
+
+    cache.decimoTerceiro = (r.decimoTerceiro || []).map(d => ({
+      ...d,
+      dataPagamento1: toInputDate(d.dataPagamento1),
+      dataPagamento2: toInputDate(d.dataPagamento2),
+      dataLancamento: toInputDate(d.dataLancamento),
+      salarioBase:    Number(d.salarioBase || 0),
+      insalubridade:  Number(d.insalubridade || 0),
+      adicionalSalario: Number(d.adicionalSalario || 0),
+      ats:            Number(d.ats || 0),
+      descontoINSS:   Number(d.descontoINSS || 0),
+      descontoIR:     Number(d.descontoIR || 0),
+      outrosDescontos: Number(d.outrosDescontos || 0),
+      mesesTrabalhados: Number(d.mesesTrabalhados || 12),
+      numDependentes: Number(d.numDependentes || 0),
     }));
 
     saveCache();
@@ -853,6 +877,14 @@ async function deleteLancamento(id) {
 
 async function saveFerias(obj) {
   return await apiCall('POST', '/ferias', obj);
+}
+
+async function saveDecimoTerceiro(obj) {
+  return await apiCall('POST', '/decimoTerceiro', obj);
+}
+
+async function deleteDecimoTerceiro(id) {
+  return await apiCall('DELETE', '/decimoTerceiro/' + id);
 }
 
 function updateGSStatus(connected) {
@@ -4018,6 +4050,11 @@ async function salvarDecimo13(dtId) {
     outrosDescontosLabel: document.getElementById('d13-outros-label')?.value || '',
     obs:                 document.getElementById('d13-obs')?.value || '',
   };
+  try {
+    await saveDecimoTerceiro(obj);
+  } catch(e) {
+    showToast('Erro ao salvar 13º: ' + e.message, 'err'); return;
+  }
   if (dtId) { const idx = cache.decimoTerceiro.findIndex(x=>x.id===dtId); if (idx>=0) cache.decimoTerceiro[idx]=obj; else cache.decimoTerceiro.push(obj); }
   else cache.decimoTerceiro.push(obj);
   saveCache(); closeModal(); renderDecimo13Area();
@@ -4044,11 +4081,16 @@ window.escolherParcelaImpressao = function(dtId) {
   `);
 };
 
-window.excluirDecimo13 = function(dtId) {
+window.excluirDecimo13 = async function(dtId) {
   if (!confirm('Excluir este lançamento de 13º?')) return;
+  try {
+    await deleteDecimoTerceiro(dtId);
+  } catch(e) {
+    showToast('Erro ao excluir: ' + e.message, 'err'); return;
+  }
   cache.decimoTerceiro = cache.decimoTerceiro.filter(x => x.id !== dtId);
   saveCache(); renderDecimo13Area();
-  showToast('Lançamento excluído.', 'ok');
+  showToast('Lançamento de 13º excluído.', 'ok');
 };
 
 window.gerarHoleriteDecimo13PDF = function(dtId, parcelaImpr) {

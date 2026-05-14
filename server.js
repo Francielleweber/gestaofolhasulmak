@@ -94,29 +94,38 @@ app.post('/api/funcionarios', async (req, res) => {
   try {
     await pool.query(`
       INSERT INTO funcionarios
-        (id, nome, cpf, cargo, salario, insalubridade, adicionalSalario, ats,
+        (id, nome, cpf, dataNascimento, endereco, telefone, email,
+         cargo, cbo, dataAdmissao, dataDemissao, pis, ctps,
+         salario, insalubridade, adicionalSalario, ats,
          salarioFamilia, auxilioCreche, auxilioCombustivel,
-         dataAdmissao, dataDemissao, dataNascimento,
-         email, telefone, banco, agencia, conta, obs)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         planoSaudeFuncionario, planoSaudeDependentes,
+         banco, agencia, conta, tipoConta, pix, obs)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       ON DUPLICATE KEY UPDATE
-        nome=VALUES(nome), cpf=VALUES(cpf), cargo=VALUES(cargo),
+        nome=VALUES(nome), cpf=VALUES(cpf), dataNascimento=VALUES(dataNascimento),
+        endereco=VALUES(endereco), telefone=VALUES(telefone), email=VALUES(email),
+        cargo=VALUES(cargo), cbo=VALUES(cbo),
+        dataAdmissao=VALUES(dataAdmissao), dataDemissao=VALUES(dataDemissao),
+        pis=VALUES(pis), ctps=VALUES(ctps),
         salario=VALUES(salario), insalubridade=VALUES(insalubridade),
         adicionalSalario=VALUES(adicionalSalario), ats=VALUES(ats),
         salarioFamilia=VALUES(salarioFamilia), auxilioCreche=VALUES(auxilioCreche),
         auxilioCombustivel=VALUES(auxilioCombustivel),
-        dataAdmissao=VALUES(dataAdmissao), dataDemissao=VALUES(dataDemissao),
-        dataNascimento=VALUES(dataNascimento),
-        email=VALUES(email), telefone=VALUES(telefone),
+        planoSaudeFuncionario=VALUES(planoSaudeFuncionario),
+        planoSaudeDependentes=VALUES(planoSaudeDependentes),
         banco=VALUES(banco), agencia=VALUES(agencia), conta=VALUES(conta),
+        tipoConta=VALUES(tipoConta), pix=VALUES(pix),
         obs=VALUES(obs), atualizadoEm=NOW()
     `, [
-      toStr(d.id), toStr(d.nome), toStr(d.cpf), toStr(d.cargo),
+      toStr(d.id), toStr(d.nome), toStr(d.cpf), toDate(d.dataNascimento),
+      toStr(d.endereco), toStr(d.telefone), toStr(d.email),
+      toStr(d.cargo), toStr(d.cbo), toDate(d.dataAdmissao), toDate(d.dataDemissao),
+      toStr(d.pis), toStr(d.ctps),
       toNum(d.salario), toNum(d.insalubridade), toNum(d.adicionalSalario), toNum(d.ats),
       toNum(d.salarioFamilia), toNum(d.auxilioCreche), toNum(d.auxilioCombustivel),
-      toDate(d.dataAdmissao), toDate(d.dataDemissao), toDate(d.dataNascimento),
-      toStr(d.email), toStr(d.telefone), toStr(d.banco), toStr(d.agencia), toStr(d.conta),
-      toStr(d.obs)
+      toNum(d.planoSaudeFuncionario), toNum(d.planoSaudeDependentes),
+      toStr(d.banco), toStr(d.agencia), toStr(d.conta), toStr(d.tipoConta || 'corrente'),
+      toStr(d.pix), toStr(d.obs)
     ]);
     res.json({ ok: true, id: d.id });
   } catch (e) {
@@ -219,30 +228,44 @@ app.post('/api/ferias', async (req, res) => {
   try {
     await pool.query(`
       INSERT INTO ferias
-        (id, funcionarioId, funcionarioNome, periodoInicio, periodoFim, dataLancamento,
-         diasFeriasGozo, diasAbono, numDependentes,
+        (id, funcionarioId, funcionarioNome,
+         periodoAquisitivoIni, periodoAquisitivoFim,
+         periodoInicio, periodoFim, competencia, dataPagamento, dataLancamento,
+         diasFeriasGozo, numDependentes,
          salarioFerias, insalubridadeFerias, adicionalFerias, atsFerias, salarioFamiliaFerias,
-         comAbono, comDobro, com1Parc13, mesesTrab13, obs)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         comAbono, diasAbono, comDobro, com1Parc13, mesesTrab13,
+         descontoINSS, descontoIR, outrosDescontos, outrosDescontosLabel,
+         propDescontoINSS, propDescontoIR, obs)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       ON DUPLICATE KEY UPDATE
         funcionarioId=VALUES(funcionarioId), funcionarioNome=VALUES(funcionarioNome),
+        periodoAquisitivoIni=VALUES(periodoAquisitivoIni), periodoAquisitivoFim=VALUES(periodoAquisitivoFim),
         periodoInicio=VALUES(periodoInicio), periodoFim=VALUES(periodoFim),
+        competencia=VALUES(competencia), dataPagamento=VALUES(dataPagamento),
         dataLancamento=VALUES(dataLancamento),
-        diasFeriasGozo=VALUES(diasFeriasGozo), diasAbono=VALUES(diasAbono),
-        numDependentes=VALUES(numDependentes),
+        diasFeriasGozo=VALUES(diasFeriasGozo), numDependentes=VALUES(numDependentes),
         salarioFerias=VALUES(salarioFerias), insalubridadeFerias=VALUES(insalubridadeFerias),
         adicionalFerias=VALUES(adicionalFerias), atsFerias=VALUES(atsFerias),
         salarioFamiliaFerias=VALUES(salarioFamiliaFerias),
-        comAbono=VALUES(comAbono), comDobro=VALUES(comDobro),
-        com1Parc13=VALUES(com1Parc13), mesesTrab13=VALUES(mesesTrab13),
+        comAbono=VALUES(comAbono), diasAbono=VALUES(diasAbono),
+        comDobro=VALUES(comDobro), com1Parc13=VALUES(com1Parc13), mesesTrab13=VALUES(mesesTrab13),
+        descontoINSS=VALUES(descontoINSS), descontoIR=VALUES(descontoIR),
+        outrosDescontos=VALUES(outrosDescontos), outrosDescontosLabel=VALUES(outrosDescontosLabel),
+        propDescontoINSS=VALUES(propDescontoINSS), propDescontoIR=VALUES(propDescontoIR),
         obs=VALUES(obs), atualizadoEm=NOW()
     `, [
       toStr(d.id), toStr(d.funcionarioId), toStr(d.funcionarioNome),
-      toDate(d.periodoInicio), toDate(d.periodoFim), toDate(d.dataLancamento),
-      toInt(d.diasFeriasGozo), toInt(d.diasAbono), toInt(d.numDependentes),
+      toDate(d.periodoAquisitivoIni), toDate(d.periodoAquisitivoFim),
+      toDate(d.periodoInicio), toDate(d.periodoFim),
+      toStr(d.competencia), toDate(d.dataPagamento), toDate(d.dataLancamento),
+      toInt(d.diasFeriasGozo), toInt(d.numDependentes),
       toNum(d.salarioFerias), toNum(d.insalubridadeFerias), toNum(d.adicionalFerias),
       toNum(d.atsFerias), toNum(d.salarioFamiliaFerias),
-      toBool(d.comAbono), toBool(d.comDobro), toBool(d.com1Parc13), toInt(d.mesesTrab13),
+      toBool(d.comAbono), toInt(d.diasAbono), toBool(d.comDobro),
+      toBool(d.com1Parc13), toInt(d.mesesTrab13),
+      toNum(d.descontoINSS), toNum(d.descontoIR),
+      toNum(d.outrosDescontos), toStr(d.outrosDescontosLabel),
+      toNum(d.propDescontoINSS), toNum(d.propDescontoIR),
       toStr(d.obs)
     ]);
     res.json({ ok: true, id: d.id });
@@ -256,6 +279,60 @@ app.post('/api/ferias', async (req, res) => {
 app.delete('/api/ferias/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM ferias WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════
+//  DÉCIMO TERCEIRO
+// ══════════════════════════════════════════════════════
+
+// Salvar
+app.post('/api/decimoTerceiro', async (req, res) => {
+  const d = req.body;
+  if (!d || !d.id) return res.status(400).json({ ok: false, error: 'Dados inválidos.' });
+  try {
+    await pool.query(`
+      INSERT INTO decimoTerceiro
+        (id, funcionarioId, funcionarioNome, ano, mesesTrabalhados, numDependentes,
+         dataPagamento1, dataPagamento2, dataLancamento,
+         salarioBase, insalubridade, adicionalSalario, ats,
+         descontoINSS, descontoIR, outrosDescontos, outrosDescontosLabel, obs)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      ON DUPLICATE KEY UPDATE
+        funcionarioId=VALUES(funcionarioId), funcionarioNome=VALUES(funcionarioNome),
+        ano=VALUES(ano), mesesTrabalhados=VALUES(mesesTrabalhados),
+        numDependentes=VALUES(numDependentes),
+        dataPagamento1=VALUES(dataPagamento1), dataPagamento2=VALUES(dataPagamento2),
+        dataLancamento=VALUES(dataLancamento),
+        salarioBase=VALUES(salarioBase), insalubridade=VALUES(insalubridade),
+        adicionalSalario=VALUES(adicionalSalario), ats=VALUES(ats),
+        descontoINSS=VALUES(descontoINSS), descontoIR=VALUES(descontoIR),
+        outrosDescontos=VALUES(outrosDescontos), outrosDescontosLabel=VALUES(outrosDescontosLabel),
+        obs=VALUES(obs), atualizadoEm=NOW()
+    `, [
+      toStr(d.id), toStr(d.funcionarioId), toStr(d.funcionarioNome),
+      toStr(d.ano), toInt(d.mesesTrabalhados), toInt(d.numDependentes),
+      toDate(d.dataPagamento1), toDate(d.dataPagamento2), toDate(d.dataLancamento),
+      toNum(d.salarioBase), toNum(d.insalubridade), toNum(d.adicionalSalario), toNum(d.ats),
+      toNum(d.descontoINSS), toNum(d.descontoIR),
+      toNum(d.outrosDescontos), toStr(d.outrosDescontosLabel),
+      toStr(d.obs)
+    ]);
+    res.json({ ok: true, id: d.id });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Excluir
+app.delete('/api/decimoTerceiro/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM decimoTerceiro WHERE id = ?', [req.params.id]);
     res.json({ ok: true });
   } catch (e) {
     console.error(e);
