@@ -3201,18 +3201,68 @@ function _buildModalFerias(feId) {
           <p style="color:var(--text3);font-size:13px;">Informe as datas de início para ver o cálculo de dias trabalhados.</p>
         </div>
 
-        <div class="grid-2" style="margin-top:12px;" id="ferias-dias-descontos-wrap" style="display:none;">
-          <div class="field">
-            <label>INSS — Folha Proporcional (R$)</label>
-            <input id="fv-prop-inss" type="text" inputmode="numeric" placeholder="R$ 0,00"
-              value="${fe ? maskCurrency(fe.propDescontoINSS||0) : ''}"
-              oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+        <div id="ferias-dias-descontos-wrap" style="display:none;margin-top:14px;">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:10px;padding:8px 12px;background:var(--accent-light);border-radius:var(--radius-sm);border:1px solid #B8CEE8;">
+            ✏️ Valores calculados automaticamente — edite se houver diferenças manuais.
           </div>
-          <div class="field">
-            <label>IR — Folha Proporcional (R$)</label>
-            <input id="fv-prop-ir" type="text" inputmode="numeric" placeholder="R$ 0,00"
-              value="${fe ? maskCurrency(fe.propDescontoIR||0) : ''}"
-              oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">Proventos — Dias Trabalhados</div>
+          <div class="grid-2" style="margin-bottom:4px;">
+            <div class="field">
+              <label>Salário proporcional (R$)</label>
+              <input id="fv-prop-sal" type="text" inputmode="numeric" placeholder="R$ 0,00"
+                value="${fe ? maskCurrency(fe.propSalario||0) : ''}"
+                oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+            </div>
+            <div class="field">
+              <label>Insalubridade proporcional (R$)</label>
+              <input id="fv-prop-insalub" type="text" inputmode="numeric" placeholder="R$ 0,00"
+                value="${fe ? maskCurrency(fe.propInsalub||0) : ''}"
+                oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+            </div>
+            <div class="field">
+              <label>ATS proporcional (R$)</label>
+              <input id="fv-prop-ats" type="text" inputmode="numeric" placeholder="R$ 0,00"
+                value="${fe ? maskCurrency(fe.propAts||0) : ''}"
+                oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+            </div>
+            <div class="field">
+              <label>Adicional de Salário proporcional (R$)</label>
+              <input id="fv-prop-adicsal" type="text" inputmode="numeric" placeholder="R$ 0,00"
+                value="${fe ? maskCurrency(fe.propAdicSal||0) : ''}"
+                oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+            </div>
+            <div class="field">
+              <label>Outros proventos (R$)</label>
+              <input id="fv-prop-outros-prov" type="text" inputmode="numeric" placeholder="R$ 0,00"
+                value="${fe ? maskCurrency(fe.propOutrosProv||0) : ''}"
+                oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+            </div>
+          </div>
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin:12px 0 8px;text-transform:uppercase;letter-spacing:0.05em;">Descontos — Dias Trabalhados</div>
+          <div class="grid-2">
+            <div class="field">
+              <label>INSS — Folha Proporcional (R$)</label>
+              <input id="fv-prop-inss" type="text" inputmode="numeric" placeholder="R$ 0,00"
+                value="${fe ? maskCurrency(fe.propDescontoINSS||0) : ''}"
+                oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+            </div>
+            <div class="field">
+              <label>IR — Folha Proporcional (R$)</label>
+              <input id="fv-prop-ir" type="text" inputmode="numeric" placeholder="R$ 0,00"
+                value="${fe ? maskCurrency(fe.propDescontoIR||0) : ''}"
+                oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+            </div>
+            <div class="field">
+              <label>Outros descontos prop. (R$)</label>
+              <input id="fv-prop-outros-desc" type="text" inputmode="numeric" placeholder="R$ 0,00"
+                value="${fe ? maskCurrency(fe.propOutrosDesc||0) : ''}"
+                oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+            </div>
+            <div class="field">
+              <label>Descrição outros descontos prop.</label>
+              <input id="fv-prop-outros-desc-label" type="text" placeholder="Ex: Plano de saúde..."
+                value="${fe ? esc(fe.propOutrosDescLabel||'') : ''}">
+            </div>
           </div>
         </div>
 
@@ -3339,50 +3389,58 @@ window.recalcFeriasModal = function() {
 
   // Folha de dias trabalhados
   const dtPrev = document.getElementById('ferias-dias-trab-preview');
+  const wrap   = document.getElementById('ferias-dias-descontos-wrap');
   if (dtPrev && iniStr && fimStr && f) {
     const mesComp = document.getElementById('fv-comp')?.value || iniStr.slice(0,7);
     const dt = calcFolhaDiasTrabalhados(f, mesComp, { periodoInicio: iniStr, periodoFim: fimStr, numDependentes: numDep });
+
     if (dt.diasTrabalhados <= 0 || dt.diasTrabalhados === dt.diasNoMes) {
       dtPrev.innerHTML = `<p style="color:var(--text3);font-size:13px;">${dt.diasTrabalhados===dt.diasNoMes?'✓ Funcionário trabalhou o mês completo antes das férias.':'Férias cobrem o mês inteiro — sem folha proporcional neste mês.'}</p>`;
-    const wrapHide = document.getElementById('ferias-dias-descontos-wrap');
-    if (wrapHide) wrapHide.style.display = 'none';
+      if (wrap) wrap.style.display = 'none';
     } else {
+      // Preenche campos editáveis apenas se ainda estiverem vazios (não sobrescreve ajustes manuais)
+      const autoFill = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && !parseCurrency(el.value)) el.value = maskCurrency(val || 0);
+      };
+      autoFill('fv-prop-sal',     dt.provSalario);
+      autoFill('fv-prop-insalub', dt.provInsalub);
+      autoFill('fv-prop-ats',     dt.provAts);
+      autoFill('fv-prop-adicsal', dt.provAdicSal);
+
+      // Lê os valores dos campos (pode ser o auto-preenchido ou o editado manualmente)
+      const propSal      = parseCurrency(document.getElementById('fv-prop-sal')?.value     || '0');
+      const propInsalub  = parseCurrency(document.getElementById('fv-prop-insalub')?.value || '0');
+      const propAts      = parseCurrency(document.getElementById('fv-prop-ats')?.value     || '0');
+      const propAdicSal  = parseCurrency(document.getElementById('fv-prop-adicsal')?.value || '0');
+      const propOutrosProv = parseCurrency(document.getElementById('fv-prop-outros-prov')?.value || '0');
+      const propINSS     = parseCurrency(document.getElementById('fv-prop-inss')?.value    || '0');
+      const propIR       = parseCurrency(document.getElementById('fv-prop-ir')?.value      || '0');
+      const propOutrosDesc = parseCurrency(document.getElementById('fv-prop-outros-desc')?.value || '0');
+      const propOutrosDescLabel = document.getElementById('fv-prop-outros-desc-label')?.value || 'Outros descontos';
+
+      const totalPropBruto = propSal + propInsalub + propAts + propAdicSal + propOutrosProv
+        + (dt.detalhesExtra||[]).filter(x=>x.tipo==='entrada').reduce((s,x)=>s+x.val,0);
+      const totalPropDesc  = propINSS + propIR + propOutrosDesc
+        + (dt.detalhesExtra||[]).filter(x=>x.tipo==='saida').reduce((s,x)=>s+x.val,0);
+      const liquidoProp    = totalPropBruto - totalPropDesc;
+
       dtPrev.innerHTML = `
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;font-size:13px;color:var(--text2);">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;font-size:13px;color:var(--text2);flex-wrap:wrap;">
           <span>Mês: <b>${mesComp}</b></span> · <span>Dias no mês: <b>${dt.diasNoMes}</b></span> · <span>Dias férias: <b style="color:var(--amber);">${dt.diasNoMes-dt.diasTrabalhados}</b></span> · <span>Dias trabalhados: <b style="color:var(--green);">${dt.diasTrabalhados}</b></span> · <span style="color:var(--text3);font-size:12px;">(base 30d)</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
-          <div>
-            <div class="section-divider" style="margin-top:0;">Proventos (${dt.diasTrabalhados}/30d)</div>
-            <div class="holerite-line"><span>Salário proporcional</span><span style="color:var(--green);">${fmt(dt.provSalario)}</span></div>
-            ${dt.provInsalub>0?`<div class="holerite-line"><span>Insalubridade</span><span style="color:var(--green);">${fmt(dt.provInsalub)}</span></div>`:''}
-            ${dt.provAdicSal>0?`<div class="holerite-line"><span>Adicional de Salário</span><span style="color:var(--green);">${fmt(dt.provAdicSal)}</span></div>`:''}
-            ${dt.provAts>0?`<div class="holerite-line"><span>ATS</span><span style="color:var(--green);">${fmt(dt.provAts)}</span></div>`:''}
-            ${dt.provSalFam>0?`<div class="holerite-line"><span>Salário Família</span><span style="color:var(--green);">${fmt(dt.provSalFam)}</span></div>`:''}
-            ${(dt.detalhesExtra||[]).filter(x=>x.tipo==='entrada').map(x=>`<div class="holerite-line"><span>${x.desc}</span><span style="color:var(--green);">${fmt(x.val)}</span></div>`).join('')}
-            <div class="holerite-line" style="font-weight:600;"><span>Total Bruto</span><span style="color:var(--green);">${fmt(dt.totalBruto)}</span></div>
-            <div class="holerite-line" style="color:var(--amber);"><span>FGTS (8%)</span><span>${fmt(dt.fgts)}</span></div>
-          </div>
-          <div style="padding-left:20px;border-left:1px solid var(--border);">
-            <div class="section-divider" style="margin-top:0;">Descontos</div>
-            ${(dt.detalhesExtra||[]).filter(x=>x.tipo==='saida').map(x=>`<div class="holerite-line" style="color:var(--red);"><span>${x.desc}</span><span>${fmt(x.val)}</span></div>`).join('')}
-            <div class="holerite-line" style="font-weight:600;color:var(--red);"><span>Total Descontos</span><span>${fmt(dt.totalDescontoExtra||0)}</span></div>
-
-          </div>
-        </div>
-        <div class="holerite-line" style="color:var(--red);font-weight:600;"><span>INSS (folha prop.)</span><span>${fmt(propDescontoINSS)}</span></div>
-            <div class="holerite-line" style="color:var(--red);font-weight:600;"><span>IR (folha prop.)</span><span>${fmt(propDescontoIR)}</span></div>
-            <div class="holerite-line" style="font-weight:600;color:var(--red);"><span>Total Descontos</span><span>${fmt(propDescontoINSS+propDescontoIR+(dt.totalDescontoExtra||0))}</span></div>
-        </div>
-        <div class="holerite-total" style="margin-top:12px;">
-          <span>LÍQUIDO FOLHA NORMAL (${dt.diasTrabalhados} dias)</span><span>${fmt(dt.totalBruto - propDescontoINSS - propDescontoIR - (dt.totalDescontoExtra||0))}</span>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Referência automática (cal.): Sal. ${fmt(dt.provSalario)} | Insalub. ${fmt(dt.provInsalub)} | ATS ${fmt(dt.provAts)} | Adic. ${fmt(dt.provAdicSal)} | Bruto ${fmt(dt.totalBruto)} | FGTS ${fmt(dt.fgts)}</div>
+        ${(dt.detalhesExtra||[]).length ? `<div style="font-size:11px;color:var(--text3);">Lançamentos do mês: ${(dt.detalhesExtra||[]).map(x=>`${x.desc}: ${fmt(x.val)}`).join(' | ')}</div>` : ''}
+        <div class="holerite-total" style="margin-top:10px;background:var(--text);">
+          <span>LÍQUIDO CALCULADO (${dt.diasTrabalhados} dias)</span>
+          <span>${fmt(liquidoProp)}</span>
         </div>`;
-  // Show desconto fields
-  const wrap = document.getElementById('ferias-dias-descontos-wrap');
-  if (wrap) wrap.style.display = 'grid';
+
+      if (wrap) wrap.style.display = 'block';
     }
   } else if (dtPrev) {
     dtPrev.innerHTML = `<p style="color:var(--text3);font-size:13px;">Informe as datas para ver o cálculo de dias trabalhados.</p>`;
+    if (wrap) wrap.style.display = 'none';
   }
 };
 
@@ -3428,8 +3486,15 @@ async function salvarFeriasCompleto(feId) {
     descontoIR:         parseCurrency(document.getElementById('fv-ir')?.value   || '0'),
     outrosDescontos:    parseCurrency(document.getElementById('fv-outros-desc')?.value || '0'),
     outrosDescontosLabel: document.getElementById('fv-outros-desc-label')?.value || '',
-    propDescontoINSS:   parseCurrency(document.getElementById('fv-prop-inss')?.value || '0'),
-    propDescontoIR:     parseCurrency(document.getElementById('fv-prop-ir')?.value   || '0'),
+    propSalario:        parseCurrency(document.getElementById('fv-prop-sal')?.value        || '0'),
+    propInsalub:        parseCurrency(document.getElementById('fv-prop-insalub')?.value     || '0'),
+    propAts:            parseCurrency(document.getElementById('fv-prop-ats')?.value         || '0'),
+    propAdicSal:        parseCurrency(document.getElementById('fv-prop-adicsal')?.value     || '0'),
+    propOutrosProv:     parseCurrency(document.getElementById('fv-prop-outros-prov')?.value || '0'),
+    propDescontoINSS:   parseCurrency(document.getElementById('fv-prop-inss')?.value  || '0'),
+    propDescontoIR:     parseCurrency(document.getElementById('fv-prop-ir')?.value    || '0'),
+    propOutrosDesc:     parseCurrency(document.getElementById('fv-prop-outros-desc')?.value || '0'),
+    propOutrosDescLabel: document.getElementById('fv-prop-outros-desc-label')?.value || '',
     obs:                document.getElementById('fv-obs')?.value || '',
   };
 
@@ -3653,6 +3718,23 @@ function _drawHoleriteFeriasPage(doc, f, fe, c, mesAno, dtPag) {
 }
 
 function _drawFolhaDiasTrabPage(doc, f, fe, dt, mesAno) {
+  // Usa valores salvos (editados manualmente) se existirem, senão usa o calculado
+  const useSal    = Number(fe.propSalario    || dt.provSalario  || 0);
+  const useInsalub= Number(fe.propInsalub    || dt.provInsalub  || 0);
+  const useAts    = Number(fe.propAts        || dt.provAts      || 0);
+  const useAdicSal= Number(fe.propAdicSal    || dt.provAdicSal  || 0);
+  const useOutrosProv = Number(fe.propOutrosProv || 0);
+  const propINSS  = Number(fe.propDescontoINSS || 0);
+  const propIR    = Number(fe.propDescontoIR   || 0);
+  const propOutrosDesc = Number(fe.propOutrosDesc || 0);
+  const propOutrosDescLabel = fe.propOutrosDescLabel || 'Outros descontos';
+
+  const totalBruto = useSal + useInsalub + useAts + useAdicSal + useOutrosProv
+    + (dt.detalhesExtra||[]).filter(x=>x.tipo==='entrada').reduce((s,x)=>s+x.val,0)
+    + (dt.provSalFam||0) + (dt.provAuxCrec||0) + (dt.provAuxComb||0);
+  const totalDescProp = propINSS + propIR + propOutrosDesc
+    + (dt.detalhesExtra||[]).filter(x=>x.tipo==='saida').reduce((s,x)=>s+x.val,0);
+
   // Header
   doc.setFillColor(122, 79, 0); // amber
   doc.rect(0, 0, 210, 35, 'F');
@@ -3686,21 +3768,21 @@ function _drawFolhaDiasTrabPage(doc, f, fe, dt, mesAno) {
   doc.setFontSize(8.5); doc.setFont('helvetica','normal'); doc.setTextColor(26,25,22);
 
   const prov = [
-    { desc: 'Salário prop. (' + dt.diasTrabalhados + '/30d)', val: dt.provSalario },
+    { desc: 'Salário prop. (' + dt.diasTrabalhados + '/30d)', val: useSal },
   ];
-  if (dt.provInsalub > 0) prov.push({ desc: 'Insalubridade prop.', val: dt.provInsalub });
-  if (dt.provAdicSal > 0) prov.push({ desc: 'Adicional de Salário prop.', val: dt.provAdicSal });
-  if (dt.provAts > 0)     prov.push({ desc: 'ATS prop.', val: dt.provAts });
-  if (dt.provSalFam > 0)  prov.push({ desc: 'Salário Família', val: dt.provSalFam });
-  if (dt.provAuxCrec > 0) prov.push({ desc: 'Aux. Creche', val: dt.provAuxCrec });
-  if (dt.provAuxComb > 0) prov.push({ desc: 'Aux. Combustível', val: dt.provAuxComb });
+  if (useInsalub  > 0) prov.push({ desc: 'Insalubridade prop.',        val: useInsalub });
+  if (useAts      > 0) prov.push({ desc: 'ATS prop.',                   val: useAts });
+  if (useAdicSal  > 0) prov.push({ desc: 'Adicional de Salário prop.',  val: useAdicSal });
+  if (useOutrosProv>0) prov.push({ desc: 'Outros proventos',            val: useOutrosProv });
+  if (dt.provSalFam > 0)  prov.push({ desc: 'Salário Família',  val: dt.provSalFam });
+  if (dt.provAuxCrec> 0)  prov.push({ desc: 'Aux. Creche',      val: dt.provAuxCrec });
+  if (dt.provAuxComb> 0)  prov.push({ desc: 'Aux. Combustível', val: dt.provAuxComb });
   (dt.detalhesExtra || []).filter(x=>x.tipo==='entrada').forEach(x => prov.push({ desc: x.desc, val: x.val }));
 
-  const propINSS = Number(fe.propDescontoINSS || 0);
-  const propIR   = Number(fe.propDescontoIR   || 0);
   const desc = [];
-  if (propINSS > 0) desc.push({ desc: 'INSS', val: propINSS });
-  if (propIR   > 0) desc.push({ desc: 'IR',   val: propIR   });
+  if (propINSS > 0)        desc.push({ desc: 'INSS',              val: propINSS });
+  if (propIR   > 0)        desc.push({ desc: 'IR',                 val: propIR });
+  if (propOutrosDesc > 0)  desc.push({ desc: propOutrosDescLabel,  val: propOutrosDesc });
   (dt.detalhesExtra || []).filter(x=>x.tipo==='saida').forEach(x => desc.push({ desc: x.desc, val: x.val }));
 
   const maxL = Math.max(prov.length, desc.length);
@@ -3724,9 +3806,8 @@ function _drawFolhaDiasTrabPage(doc, f, fe, dt, mesAno) {
   doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
   doc.setTextColor(26,107,69);
   doc.text('Total Proventos:', 15, y);
-  doc.text(fmt(dt.totalBruto), 100, y, { align:'right' });
+  doc.text(fmt(totalBruto), 100, y, { align:'right' });
   doc.setTextColor(139,32,32);
-  const totalDescProp = propINSS + propIR + (dt.totalDescontoExtra||0);
   doc.text('Total Descontos:', 115, y);
   doc.text(fmt(totalDescProp), 200, y, { align:'right' });
   y += 8;
@@ -3740,7 +3821,7 @@ function _drawFolhaDiasTrabPage(doc, f, fe, dt, mesAno) {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(12); doc.setFont('helvetica', 'bold');
   doc.text('LÍQUIDO A RECEBER — DIAS TRABALHADOS:', 15, y + 9);
-  doc.text(fmt(dt.totalBruto - totalDescProp), 200, y + 9, { align:'right' });
+  doc.text(fmt(totalBruto - totalDescProp), 200, y + 9, { align:'right' });
 
   // Assinatura
   doc.setDrawColor(160,155,145);
