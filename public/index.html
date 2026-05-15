@@ -3164,9 +3164,50 @@ function _buildModalFerias(feId) {
           </div>
         </div>
 
-        <div class="section-divider">Cálculo Automático</div>
-        <div id="ferias-calc-preview" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
-          <p style="color:var(--text3);font-size:13px;">Preencha os campos acima para ver o cálculo.</p>
+        <div style="font-size:15px;font-weight:700;color:#8B2020;margin:20px 0 10px;padding-bottom:8px;border-bottom:2px solid #8B2020;letter-spacing:0.01em;">⚙️ Cálculo Automático — Proventos das Férias</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:10px;padding:8px 12px;background:var(--accent-light);border-radius:var(--radius-sm);border:1px solid #B8CEE8;">
+          ✏️ Valores calculados automaticamente — edite se houver diferenças manuais.
+        </div>
+        <div class="grid-2" style="margin-bottom:4px;">
+          <div class="field">
+            <label>Salário Férias proporcional (R$)</label>
+            <input id="fv-calc-sal" type="text" inputmode="numeric" placeholder="R$ 0,00"
+              value="${fe ? maskCurrency(fe.calcProvSalario||0) : ''}"
+              oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+          </div>
+          <div class="field">
+            <label>Insalubridade (R$)</label>
+            <input id="fv-calc-insalub" type="text" inputmode="numeric" placeholder="R$ 0,00"
+              value="${fe ? maskCurrency(fe.calcProvInsalub||0) : ''}"
+              oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+          </div>
+          <div class="field">
+            <label>ATS (R$)</label>
+            <input id="fv-calc-ats" type="text" inputmode="numeric" placeholder="R$ 0,00"
+              value="${fe ? maskCurrency(fe.calcProvAts||0) : ''}"
+              oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+          </div>
+          <div class="field">
+            <label>Hora Extra (R$)</label>
+            <input id="fv-calc-he" type="text" inputmode="numeric" placeholder="R$ 0,00"
+              value="${fe ? maskCurrency(fe.calcProvHoraExtra||0) : ''}"
+              oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+          </div>
+          <div class="field">
+            <label>Outros Valores — integra 1/3 (R$)</label>
+            <input id="fv-calc-outros" type="text" inputmode="numeric" placeholder="R$ 0,00"
+              value="${fe ? maskCurrency(fe.calcProvOutros||0) : ''}"
+              oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+          </div>
+          <div class="field">
+            <label>Adicional de Salário — não integra 1/3 (R$)</label>
+            <input id="fv-calc-adicsal" type="text" inputmode="numeric" placeholder="R$ 0,00"
+              value="${fe ? maskCurrency(fe.calcProvAdicSal||0) : ''}"
+              oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+          </div>
+        </div>
+        <div id="ferias-calc-preview" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-top:4px;">
+          <p style="color:var(--text3);font-size:13px;">Preencha os campos acima para ver o resumo.</p>
         </div>
 
         <div class="section-divider" style="margin-top:18px;">Descontos</div>
@@ -3196,7 +3237,7 @@ function _buildModalFerias(feId) {
           </div>
         </div>
 
-        <div class="section-divider" style="margin-top:18px;">Folha dos Dias Trabalhados no Mês</div>
+        <div style="font-size:15px;font-weight:700;color:#8B2020;margin:24px 0 10px;padding-bottom:8px;border-bottom:2px solid #8B2020;letter-spacing:0.01em;">📋 Folha dos Dias Trabalhados no Mês</div>
         <div id="ferias-dias-trab-preview" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
           <p style="color:var(--text3);font-size:13px;">Informe as datas de início para ver o cálculo de dias trabalhados.</p>
         </div>
@@ -3347,28 +3388,55 @@ window.recalcFeriasModal = function() {
   const prev = document.getElementById('ferias-calc-preview');
   if (prev && salBase > 0 && dias > 0) {
     const c = calcVerbasFeriasCompleto(fakeF, feriaObj);
+
+    // Preenche campos editáveis apenas se estiverem vazios
+    const autoFill = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && !parseCurrency(el.value)) el.value = maskCurrency(val || 0);
+    };
+    autoFill('fv-calc-sal',    c.provSalario);
+    autoFill('fv-calc-insalub',c.provInsalub);
+    autoFill('fv-calc-ats',    c.provAts);
+    autoFill('fv-calc-he',     c.provHoraExtra);
+    autoFill('fv-calc-outros', c.provOutros);
+    autoFill('fv-calc-adicsal',c.provAdicSal);
+
+    // Lê os valores dos campos (auto ou editado manualmente)
+    const useSal    = parseCurrency(document.getElementById('fv-calc-sal')?.value    || '0') || c.provSalario;
+    const useInsalub= parseCurrency(document.getElementById('fv-calc-insalub')?.value|| '0') || c.provInsalub;
+    const useAts    = parseCurrency(document.getElementById('fv-calc-ats')?.value    || '0') || c.provAts;
+    const useHE     = parseCurrency(document.getElementById('fv-calc-he')?.value     || '0');
+    const useOutros = parseCurrency(document.getElementById('fv-calc-outros')?.value || '0');
+    const useAdicSal= parseCurrency(document.getElementById('fv-calc-adicsal')?.value|| '0');
+
+    const r = v => Math.round(v * 100) / 100;
+    const baseUmTerco = useSal + useInsalub + useHE + useAts;
+    const terco       = r(baseUmTerco / 3);
+    const abono       = c.comAbono && c.diasAbono > 0 ? r(salBase / 30 * c.diasAbono) : 0;
+    const tercoAbono  = abono > 0 ? r(abono / 3) : 0;
+    const totalBase   = useSal + useInsalub + useAdicSal + useAts + useHE + useOutros;
+    const dobroFer    = c.comDobro ? r(totalBase) : 0;
+    const tercoDobroFer = c.comDobro ? r(terco) : 0;
+    const totalProv   = totalBase + terco + abono + tercoAbono + dobroFer + tercoDobroFer + c.priParcela13;
+    const liquido     = totalProv - descontoINSS - descontoIR - outrosDescontos;
+
     prev.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
         <div>
-          <div class="section-divider" style="margin-top:0;">Proventos</div>
-          <div class="holerite-line"><span>Salário Férias (${dias}d${dias<30?' prop.':''})</span><span style="color:var(--green);font-weight:600;">${fmt(c.provSalario)}</span></div>
-          ${c.provInsalub>0?`<div class="holerite-line"><span>Insalubridade</span><span style="color:var(--green);">${fmt(c.provInsalub)}</span></div>`:''}
-          ${c.provHoraExtra>0?`<div class="holerite-line"><span>Hora Extra</span><span style="color:var(--green);">${fmt(c.provHoraExtra)}</span></div>`:''}
-          ${c.provAts>0?`<div class="holerite-line"><span>ATS</span><span style="color:var(--green);">${fmt(c.provAts)}</span></div>`:''}
-          ${c.provOutros>0?`<div class="holerite-line"><span>Outros Valores</span><span style="color:var(--green);">${fmt(c.provOutros)}</span></div>`:''}
-          ${c.provAdicSal>0?`<div class="holerite-line"><span>Adicional de Salário <em style="font-size:11px;color:var(--text3);">(não integra 1/3)</em></span><span style="color:var(--green);">${fmt(c.provAdicSal)}</span></div>`:''}
-          <div class="holerite-line" style="font-size:11px;color:var(--text3);"><span>Base do 1/3 (sal+insalub+HE+ATS)</span><span>${fmt(c.baseUmTerco)}</span></div>
-          <div class="holerite-line" style="color:var(--accent-text);font-weight:600;"><span>1/3 Constitucional</span><span>${fmt(c.terco)}</span></div>
-          ${c.comAbono&&c.abono>0?`
-          <div class="holerite-line" style="color:var(--green);"><span>Abono Pecuniário (${c.diasAbono}d)</span><span>${fmt(c.abono)}</span></div>
-          <div class="holerite-line" style="color:var(--accent-text);"><span>1/3 do Abono</span><span>${fmt(c.tercoAbono)}</span></div>`:''}
-          ${c.comDobro?`
-          <div class="holerite-line" style="color:var(--red);"><span>Adicional Dobro Férias</span><span>${fmt(c.dobroFer)}</span></div>
-          <div class="holerite-line" style="color:var(--red);"><span>1/3 do Dobro</span><span>${fmt(c.tercoDobroFer)}</span></div>`:''}
-          ${c.com1Parc13&&c.priParcela13>0?`
-          <div class="holerite-line" style="color:var(--amber);"><span>1ª Parcela 13º (${c.mesesTrab13}m)</span><span>${fmt(c.priParcela13)}</span></div>`:''}
-          <div class="holerite-line" style="font-weight:700;font-size:13px;color:var(--green);"><span>TOTAL PROVENTOS</span><span>${fmt(c.totalProv)}</span></div>
-          <div class="holerite-line" style="color:var(--amber);font-size:12px;"><span>FGTS (8% — informativo)</span><span>${fmt(c.fgts)}</span></div>
+          <div class="section-divider" style="margin-top:0;">Resumo Proventos</div>
+          <div class="holerite-line"><span>Salário Férias</span><span style="color:var(--green);font-weight:600;">${fmt(useSal)}</span></div>
+          ${useInsalub>0?`<div class="holerite-line"><span>Insalubridade</span><span style="color:var(--green);">${fmt(useInsalub)}</span></div>`:''}
+          ${useHE>0?`<div class="holerite-line"><span>Hora Extra</span><span style="color:var(--green);">${fmt(useHE)}</span></div>`:''}
+          ${useAts>0?`<div class="holerite-line"><span>ATS</span><span style="color:var(--green);">${fmt(useAts)}</span></div>`:''}
+          ${useOutros>0?`<div class="holerite-line"><span>Outros Valores</span><span style="color:var(--green);">${fmt(useOutros)}</span></div>`:''}
+          ${useAdicSal>0?`<div class="holerite-line"><span>Adicional de Salário <em style="font-size:11px;color:var(--text3);">(não integra 1/3)</em></span><span style="color:var(--green);">${fmt(useAdicSal)}</span></div>`:''}
+          <div class="holerite-line" style="font-size:11px;color:var(--text3);"><span>Base do 1/3 (sal+insalub+HE+ATS)</span><span>${fmt(baseUmTerco)}</span></div>
+          <div class="holerite-line" style="color:var(--accent-text);font-weight:600;"><span>1/3 Constitucional</span><span>${fmt(terco)}</span></div>
+          ${c.comAbono&&abono>0?`<div class="holerite-line" style="color:var(--green);"><span>Abono (${c.diasAbono}d)</span><span>${fmt(abono)}</span></div><div class="holerite-line" style="color:var(--accent-text);"><span>1/3 do Abono</span><span>${fmt(tercoAbono)}</span></div>`:''}
+          ${c.comDobro?`<div class="holerite-line" style="color:var(--red);"><span>Dobro Férias</span><span>${fmt(dobroFer)}</span></div><div class="holerite-line" style="color:var(--red);"><span>1/3 do Dobro</span><span>${fmt(tercoDobroFer)}</span></div>`:''}
+          ${c.com1Parc13&&c.priParcela13>0?`<div class="holerite-line" style="color:var(--amber);"><span>1ª Parcela 13º (${c.mesesTrab13}m)</span><span>${fmt(c.priParcela13)}</span></div>`:''}
+          <div class="holerite-line" style="font-weight:700;font-size:13px;color:var(--green);"><span>TOTAL PROVENTOS</span><span>${fmt(totalProv)}</span></div>
+          <div class="holerite-line" style="color:var(--amber);font-size:12px;"><span>FGTS (8% — informativo)</span><span>${fmt(r((useSal+useInsalub+useHE+useAts)*ALQ_FGTS))}</span></div>
         </div>
         <div style="padding-left:20px;border-left:1px solid var(--border);">
           <div class="section-divider" style="margin-top:0;">Descontos</div>
@@ -3381,10 +3449,10 @@ window.recalcFeriasModal = function() {
         </div>
       </div>
       <div class="holerite-total" style="margin-top:12px;">
-        <span>LÍQUIDO A RECEBER (FÉRIAS)</span><span>${fmt(c.totalProv - descontoINSS - descontoIR - outrosDescontos)}</span>
+        <span>LÍQUIDO A RECEBER (FÉRIAS)</span><span>${fmt(liquido)}</span>
       </div>`;
   } else if (prev) {
-    prev.innerHTML = `<p style="color:var(--text3);font-size:13px;">Preencha os campos acima para ver o cálculo.</p>`;
+    prev.innerHTML = `<p style="color:var(--text3);font-size:13px;">Preencha os campos acima para ver o resumo.</p>`;
   }
 
   // Folha de dias trabalhados
@@ -3470,6 +3538,12 @@ async function salvarFeriasCompleto(feId) {
     competencia:        document.getElementById('fv-comp')?.value || iniStr.slice(0,7),
     dataPagamento:      document.getElementById('fv-dtpag')?.value || '',
     dataLancamento:     feId ? (cache.ferias.find(x=>x.id===feId)?.dataLancamento || new Date().toISOString().slice(0,10)) : new Date().toISOString().slice(0,10),
+    calcProvSalario:    parseCurrency(document.getElementById('fv-calc-sal')?.value     || '0'),
+    calcProvInsalub:    parseCurrency(document.getElementById('fv-calc-insalub')?.value  || '0'),
+    calcProvAts:        parseCurrency(document.getElementById('fv-calc-ats')?.value      || '0'),
+    calcProvHoraExtra:  parseCurrency(document.getElementById('fv-calc-he')?.value       || '0'),
+    calcProvOutros:     parseCurrency(document.getElementById('fv-calc-outros')?.value   || '0'),
+    calcProvAdicSal:    parseCurrency(document.getElementById('fv-calc-adicsal')?.value  || '0'),
     salarioFerias:      parseCurrency(document.getElementById('fv-salario')?.value || '0'),
     insalubridadeFerias:parseCurrency(document.getElementById('fv-insalub')?.value || '0'),
     adicionalFerias:    parseCurrency(document.getElementById('fv-adicsal')?.value || '0'),
@@ -3618,15 +3692,31 @@ function _drawHoleriteFeriasPage(doc, f, fe, c, mesAno, dtPag) {
 
   doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(26, 25, 22);
 
+  // Usa valores editados manualmente se existirem, senão usa o calculado
+  const r2 = v => Math.round(v * 100) / 100;
+  const useSal     = Number(fe.calcProvSalario   || c.provSalario   || 0);
+  const useInsalub = Number(fe.calcProvInsalub   || c.provInsalub   || 0);
+  const useAts     = Number(fe.calcProvAts       || c.provAts       || 0);
+  const useHE      = Number(fe.calcProvHoraExtra || c.provHoraExtra || 0);
+  const useOutros  = Number(fe.calcProvOutros    || c.provOutros    || 0);
+  const useAdicSal = Number(fe.calcProvAdicSal   || c.provAdicSal   || 0);
+
+  const baseUmTerco = useSal + useInsalub + useHE + useAts;
+  const tercoEdit   = r2(baseUmTerco / 3);
+  const totalBaseEdit = useSal + useInsalub + useAdicSal + useAts + useHE + useOutros;
+  const dobroEdit   = c.comDobro ? r2(totalBaseEdit) : 0;
+  const tercoDobroEdit = c.comDobro ? r2(tercoEdit) : 0;
+  const totalProvEdit = totalBaseEdit + tercoEdit + c.abono + c.tercoAbono + dobroEdit + tercoDobroEdit + c.priParcela13;
+
   const prov = [
-    { desc: 'Salário Férias (' + (fe.diasFeriasGozo||30) + 'd)', val: c.provSalario },
+    { desc: 'Salário Férias (' + (fe.diasFeriasGozo||30) + 'd)', val: useSal },
   ];
-  if (c.provInsalub > 0)   prov.push({ desc: 'Insalubridade',                         val: c.provInsalub });
-  if (c.provHoraExtra > 0) prov.push({ desc: 'Hora Extra',                             val: c.provHoraExtra });
-  if (c.provAts > 0)       prov.push({ desc: 'ATS',                                    val: c.provAts });
-  if (c.provOutros > 0)    prov.push({ desc: 'Outros Valores',                         val: c.provOutros });
-  if (c.provAdicSal > 0)   prov.push({ desc: 'Adicional de Salário (não integra 1/3)', val: c.provAdicSal, color: [90, 88, 80] });
-  prov.push({ desc: '1/3 Constitucional (base: sal+insalub+HE+ATS)', val: c.terco, bold: true, color: [27,79,138] });
+  if (useInsalub > 0)   prov.push({ desc: 'Insalubridade',                         val: useInsalub });
+  if (useHE      > 0)   prov.push({ desc: 'Hora Extra',                             val: useHE });
+  if (useAts     > 0)   prov.push({ desc: 'ATS',                                    val: useAts });
+  if (useOutros  > 0)   prov.push({ desc: 'Outros Valores',                         val: useOutros });
+  if (useAdicSal > 0)   prov.push({ desc: 'Adicional de Salário (não integra 1/3)', val: useAdicSal, color: [90,88,80] });
+  prov.push({ desc: '1/3 Constitucional (base: sal+insalub+HE+ATS)', val: tercoEdit, bold: true, color: [27,79,138] });
   if (c.comAbono && c.abono > 0) {
     prov.push({ desc: 'Abono Pecuniário (' + c.diasAbono + 'd) *isento', val: c.abono });
     prov.push({ desc: '1/3 do Abono *isento', val: c.tercoAbono, color: [27,79,138] });
@@ -3644,7 +3734,7 @@ function _drawHoleriteFeriasPage(doc, f, fe, c, mesAno, dtPag) {
   const outrosDescontos = Number(fe.outrosDescontos  || 0);
   const outrosLabel     = fe.outrosDescontosLabel    || 'Outros descontos';
   const totalDesc = descontoINSS + descontoIR + outrosDescontos;
-  const liquidoFinal = c.totalProv - totalDesc;
+  const liquidoFinal = totalProvEdit - totalDesc;
 
   const desc = [
     { desc: 'INSS', val: descontoINSS > 0 ? descontoINSS : null, obs: descontoINSS === 0 },
@@ -3683,7 +3773,7 @@ function _drawHoleriteFeriasPage(doc, f, fe, c, mesAno, dtPag) {
   doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
   doc.setTextColor(26, 107, 69);
   doc.text('Total Proventos:', 15, y);
-  doc.text(fmt(c.totalProv), 100, y, { align:'right' });
+  doc.text(fmt(totalProvEdit), 100, y, { align:'right' });
   doc.setTextColor(139, 32, 32);
   doc.text('Total Descontos:', 115, y);
   doc.text(fmt(totalDesc), 200, y, { align:'right' });
