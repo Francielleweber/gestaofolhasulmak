@@ -2771,7 +2771,6 @@ function calcDiasTrabalhados(mesAnoStr, iniciFerias, fimFerias) {
 
 // Calcula verbas de férias — completo com abono, dobro, 1ª parcela 13º, etc.
 // BASE DO 1/3: salario base + insalubridade + hora extra + ATS  (adicional de salario NAO integra)
-// BASE DO ABONO: salario base + insalubridade + ATS
 function calcVerbasFeriasCompleto(f, feriaObj) {
   const dias   = Number(feriaObj.diasFeriasGozo || 30);
   const numDep = Number(feriaObj.numDependentes || 0);
@@ -2810,10 +2809,9 @@ function calcVerbasFeriasCompleto(f, feriaObj) {
   // Total base completo (para calculo de dobro e proventos)
   const totalBase = provSalario + provInsalub + provAdicSal + provAts + provHoraExtra + provOutros;
 
-  // Abono pecuniario: ate 10 dias vendidos (base: salario + insalubridade + ATS)
+  // Abono pecuniario: ate 10 dias vendidos (1/3 do salario por dia)
   const diasAbono  = Number(feriaObj.diasAbono || 0);
-  const baseAbono  = salBase + insalub + ats;
-  const abono      = comAbono && diasAbono > 0 ? r(baseAbono / 30 * diasAbono) : 0;
+  const abono      = comAbono && diasAbono > 0 ? r(salBase / 30 * diasAbono) : 0;
   const tercoAbono = comAbono && abono > 0 ? r(abono / 3) : 0;
 
   // Dobro de ferias: duplica totalBase + 1/3
