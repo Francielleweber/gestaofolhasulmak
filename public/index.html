@@ -3414,8 +3414,8 @@ window.recalcFeriasModal = function() {
     const r = v => Math.round(v * 100) / 100;
     const baseUmTerco = useSal + useInsalub + useHE + useAts;
     const terco       = r(baseUmTerco / 3);
-    const abono       = c.comAbono && c.diasAbono > 0 ? r((useSal + useInsalub + useAts) / 30 * c.diasAbono) : 0;
-    const tercoAbono  = abono > 0 ? r(abono / 3) : 0;
+    const abono       = c.abono;
+    const tercoAbono  = c.tercoAbono;
     const totalBase   = useSal + useInsalub + useAdicSal + useAts + useHE + useOutros;
     const dobroFer    = c.comDobro ? r(totalBase) : 0;
     const tercoDobroFer = c.comDobro ? r(terco) : 0;
