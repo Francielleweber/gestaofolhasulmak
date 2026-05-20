@@ -2962,7 +2962,13 @@ function renderFeriasArea() {
     grupos[fe.funcionarioId].push(fe);
   });
 
-  area.innerHTML = Object.entries(grupos).map(([fid, feriasLista]) => {
+  area.innerHTML = Object.entries(grupos)
+    .sort(([fidA], [fidB]) => {
+      const nA = (cache.funcionarios.find(x => x.id === fidA)?.nome || '').toLowerCase();
+      const nB = (cache.funcionarios.find(x => x.id === fidB)?.nome || '').toLowerCase();
+      return nA.localeCompare(nB, 'pt-BR');
+    })
+    .map(([fid, feriasLista]) => {
     const f = cache.funcionarios.find(x => x.id === fid);
     return `
       <div class="card" style="margin-bottom:20px;">
@@ -3175,37 +3181,37 @@ function _buildModalFerias(feId) {
             <label>Salário Férias proporcional (R$)</label>
             <input id="fv-calc-sal" type="text" inputmode="numeric" placeholder="R$ 0,00"
               value="${fe ? maskCurrency(fe.calcProvSalario||0) : ''}"
-              oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+              oninput="applyMaskCurrencyInline(this);_markFeriasCalcManual('fv-calc-sal');recalcFeriasModal()">
           </div>
           <div class="field">
             <label>Insalubridade (R$)</label>
             <input id="fv-calc-insalub" type="text" inputmode="numeric" placeholder="R$ 0,00"
               value="${fe ? maskCurrency(fe.calcProvInsalub||0) : ''}"
-              oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+              oninput="applyMaskCurrencyInline(this);_markFeriasCalcManual('fv-calc-insalub');recalcFeriasModal()">
           </div>
           <div class="field">
             <label>ATS (R$)</label>
             <input id="fv-calc-ats" type="text" inputmode="numeric" placeholder="R$ 0,00"
               value="${fe ? maskCurrency(fe.calcProvAts||0) : ''}"
-              oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+              oninput="applyMaskCurrencyInline(this);_markFeriasCalcManual('fv-calc-ats');recalcFeriasModal()">
           </div>
           <div class="field">
             <label>Hora Extra (R$)</label>
             <input id="fv-calc-he" type="text" inputmode="numeric" placeholder="R$ 0,00"
               value="${fe ? maskCurrency(fe.calcProvHoraExtra||0) : ''}"
-              oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+              oninput="applyMaskCurrencyInline(this);_markFeriasCalcManual(\'fv-calc-he\');recalcFeriasModal()">
           </div>
           <div class="field">
             <label>Outros Valores — integra 1/3 (R$)</label>
             <input id="fv-calc-outros" type="text" inputmode="numeric" placeholder="R$ 0,00"
               value="${fe ? maskCurrency(fe.calcProvOutros||0) : ''}"
-              oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+              oninput="applyMaskCurrencyInline(this);_markFeriasCalcManual(\'fv-calc-outros\');recalcFeriasModal()">
           </div>
           <div class="field">
             <label>Adicional de Salário — não integra 1/3 (R$)</label>
             <input id="fv-calc-adicsal" type="text" inputmode="numeric" placeholder="R$ 0,00"
               value="${fe ? maskCurrency(fe.calcProvAdicSal||0) : ''}"
-              oninput="applyMaskCurrencyInline(this);recalcFeriasModal()">
+              oninput="applyMaskCurrencyInline(this);_markFeriasCalcManual('fv-calc-adicsal');recalcFeriasModal()">
           </div>
         </div>
         <div id="ferias-calc-preview" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-top:4px;">
@@ -3326,6 +3332,7 @@ function _buildModalFerias(feId) {
 }
 
 window.modalNovasFerias = function(preFuncId) {
+  window._resetFeriasCalcManual();
   openModal(_buildModalFerias(null));
   if (preFuncId) {
     const sel = document.getElementById('fv-func');
@@ -3334,8 +3341,40 @@ window.modalNovasFerias = function(preFuncId) {
 };
 
 window.modalEditarFerias = function(feId) {
+  window._resetFeriasCalcManual();
   openModal(_buildModalFerias(feId));
+  // Se o período já tem valores salvos nos campos de cálculo, marcar como editados manualmente
+  // para preservar os valores que o usuário salvou anteriormente
+  const fe = cache.ferias.find(x => x.id === feId);
+  if (fe) {
+    const pairs = [
+      ['fv-calc-sal', fe.calcProvSalario],
+      ['fv-calc-insalub', fe.calcProvInsalub],
+      ['fv-calc-ats', fe.calcProvAts],
+      ['fv-calc-he', fe.calcProvHoraExtra],
+      ['fv-calc-outros', fe.calcProvOutros],
+      ['fv-calc-adicsal', fe.calcProvAdicSal],
+    ];
+    pairs.forEach(([id, val]) => { if (Number(val) > 0) _markFeriasCalcManual(id); });
+  }
   setTimeout(() => recalcFeriasModal(), 80);
+};
+
+// Conjunto de ids dos campos de cálculo automático que foram editados manualmente pelo usuário
+if (!window._feriasCalcManualEdited) window._feriasCalcManualEdited = new Set();
+
+// IDs dos campos de cálculo automático de férias
+const FERIAS_CALC_AUTO_IDS = ['fv-calc-sal','fv-calc-insalub','fv-calc-ats','fv-calc-he','fv-calc-outros','fv-calc-adicsal'];
+
+// Marca campo como editado manualmente quando o usuário digita
+function _markFeriasCalcManual(id) {
+  if (!window._feriasCalcManualEdited) window._feriasCalcManualEdited = new Set();
+  window._feriasCalcManualEdited.add(id);
+}
+
+// Reseta rastreamento (chamado ao abrir modal)
+window._resetFeriasCalcManual = function() {
+  window._feriasCalcManualEdited = new Set();
 };
 
 window.recalcFeriasModal = function() {
@@ -3391,10 +3430,12 @@ window.recalcFeriasModal = function() {
   if (prev && salBase > 0 && dias > 0) {
     const c = calcVerbasFeriasCompleto(fakeF, feriaObj);
 
-    // Preenche campos editáveis apenas se estiverem vazios
+    // Preenche campos automáticos, respeitando edições manuais do usuário
+    // Campos não editados manualmente são sempre recalculados (inclusive ao mudar dias)
+    const manual = window._feriasCalcManualEdited || new Set();
     const autoFill = (id, val) => {
       const el = document.getElementById(id);
-      if (el && !parseCurrency(el.value)) el.value = maskCurrency(val || 0);
+      if (el && !manual.has(id)) el.value = maskCurrency(val || 0);
     };
     autoFill('fv-calc-sal',    c.provSalario);
     autoFill('fv-calc-insalub',c.provInsalub);
